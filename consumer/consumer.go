@@ -1,9 +1,9 @@
 package consumer
 
 import (
+	"bytes"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -50,7 +50,7 @@ func (c *Consumer) Read() error {
 
 	errChan := make(chan error)
 	for _, shard := range stream.StreamDescription.Shards {
-		go c.iterateFrom(shard, atTimestamp, errChan)
+		go c.read(shard, atTimestamp, errChan)
 	}
 	select {
 	case err := <-errChan:
@@ -76,7 +76,7 @@ func (c *Consumer) printStreamInfo(stream *kinesis.DescribeStreamOutput) {
 	desc := stream.StreamDescription
 	var active, closed int
 	for _, s := range desc.Shards {
-		if s.SequenceNumberRange.EndingSequenceNumber != nil {
+		if c.closed(s) {
 			closed += 1
 		} else {
 			active += 1
@@ -97,8 +97,12 @@ func (c *Consumer) printStreamInfo(stream *kinesis.DescribeStreamOutput) {
 	table.Render()
 }
 
-func (c *Consumer) iterateFrom(shard *kinesis.Shard, atTimestamp time.Time, errChan chan<- error) {
-	if shard.SequenceNumberRange.EndingSequenceNumber != nil {
+func (c *Consumer) closed(shard *kinesis.Shard) bool {
+	return shard.SequenceNumberRange.EndingSequenceNumber != nil
+}
+
+func (c *Consumer) read(shard *kinesis.Shard, atTimestamp time.Time, errChan chan<- error) {
+	if c.closed(shard) {
 		return
 	}
 
@@ -141,7 +145,7 @@ func (c *Consumer) getRecordsBy(iterator *string, shard *kinesis.Shard) (*string
 			data = r.Data[:]
 		}
 		datetime := r.ApproximateArrivalTimestamp.Format("2006-01-02 15:04:05")
-		message := strings.TrimSuffix(string(data), "\n")
+		message := string(bytes.TrimSuffix(data, []byte("\n")))
 		if c.Verbose {
 			fmt.Println(datetime, *shard.ShardId, *r.SequenceNumber, message)
 		} else {
