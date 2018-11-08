@@ -22,7 +22,7 @@ go get -u github.com/waltzofpearls/kitkat
 
 To see the usage of kitkat, run
 
-```
+```shell
 $> kitkat --help
 
 # Producer usage
@@ -54,7 +54,7 @@ $> tail /var/log/syslog | AWS_PROFILE=my-profile kitkat p -t my-demo-stream -v
 
 Consume and tail messages from `my-demo-stream`
 
-```
+```shell
 $> kitkat c -t my-demo-stream
 
 # Use a non default AWS profile name
