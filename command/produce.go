@@ -17,7 +17,7 @@ func init() {
 		Run:     produce(p),
 	}
 	rootCmd.AddCommand(cmd)
-	cmd.Flags().StringVarP(&p.Stream, "stream", "t", "", "Kinesis stream name")
+	cmd.Flags().StringVarP(&p.Stream, "stream", "s", "", "Kinesis stream name")
 	cmd.Flags().StringVarP(&p.Region, "region", "r", "us-west-2", "AWS region")
 	cmd.Flags().StringVarP(&p.PartitionKey, "key", "k", "", "Partition key or random key if left empty")
 	cmd.Flags().BoolVarP(&p.Aggregated, "aggregated", "a", false, "Produce in KPL aggregated record format")

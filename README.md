@@ -5,7 +5,7 @@
 Kitkat is a command line Kinesis Streams producer and consumer.
 
 In producer mode kitkat reads messages from stdin, delimited with new line (\n), and produces them
-to the provided Kinesis Streams (--stream or -t)
+to the provided Kinesis Streams (--stream or -s)
 
 In consumer mode kitkat reads messages from Kinesis Streams shards and prints them to stdout.
 
@@ -39,30 +39,30 @@ $> kitkat consume --help
 Read messages from stdin, produce to `my-demo-stream`
 
 ```shell
-$> kitkat p -t my-demo-stream
+$> kitkat p -s my-demo-stream
 
 # Use a non default AWS profile name
-$> AWS_PROFILE=my-profile kitkat p -t my-demo-stream
+$> AWS_PROFILE=my-profile kitkat p -s my-demo-stream
 
 # Enable verbose mode, which prints shard ID and sequence number
 # from the newly produced message
-$> AWS_PROFILE=my-profile kitkat p -t my-demo-stream -v
+$> AWS_PROFILE=my-profile kitkat p -s my-demo-stream -v
 
 # Tail syslog and pipe to kitkat producer
-$> tail /var/log/syslog | AWS_PROFILE=my-profile kitkat p -t my-demo-stream -v
+$> tail /var/log/syslog | AWS_PROFILE=my-profile kitkat p -s my-demo-stream -v
 ```
 
 Consume and tail messages from `my-demo-stream`
 
 ```shell
-$> kitkat c -t my-demo-stream
+$> kitkat c -s my-demo-stream
 
 # Use a non default AWS profile name
-$> AWS_PROFILE=my-profile kitkat c -t my-demo-stream
+$> AWS_PROFILE=my-profile kitkat c -s my-demo-stream
 
 # Enable verbose mode, which prints stream info, message shard ID
 # and message sequence number
-$> AWS_PROFILE=my-profile kitkat c -t my-demo-stream -v
+$> AWS_PROFILE=my-profile kitkat c -s my-demo-stream -v
 ```
 
 <p align="center"><strong>Enjoy!</strong></p>

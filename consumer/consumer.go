@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"bytes"
+	"crypto/md5"
 	"fmt"
 	"os"
 	"time"
@@ -9,16 +10,19 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/golang/protobuf/proto"
 	"github.com/olekukonko/tablewriter"
+	aggregated "github.com/waltzofpearls/kitkat/proto"
 )
+
+var magicNumber = []byte{0xF3, 0x89, 0x9A, 0xC2}
 
 type Consumer struct {
 	Stream   string
 	Region   string
-	Size     int
 	Iterator string
 	Limit    int64
-	Interval time.Duration
+	Interval int64
 	Since    string
 	Verbose  bool
 
@@ -125,7 +129,7 @@ func (c *Consumer) read(shard *kinesis.Shard, atTimestamp time.Time, errChan cha
 				c.Stream, shard.ShardId, err)
 			return
 		}
-		time.Sleep(c.Interval)
+		time.Sleep(time.Duration(c.Interval) * time.Millisecond)
 	}
 }
 
@@ -137,15 +141,12 @@ func (c *Consumer) getRecordsBy(iterator *string, shard *kinesis.Shard) (*string
 	if err != nil {
 		return nil, err
 	}
-	var data []byte
 	for _, r := range records.Records {
-		if c.Size > 0 && len(r.Data) > c.Size {
-			data = r.Data[:c.Size-1]
-		} else {
-			data = r.Data[:]
+		if isAggregated(r) {
+			r = deaggregate(r)
 		}
 		datetime := r.ApproximateArrivalTimestamp.Format("2006-01-02 15:04:05")
-		message := string(bytes.TrimSuffix(data, []byte("\n")))
+		message := string(bytes.TrimSuffix(r.Data, []byte("\n")))
 		if c.Verbose {
 			fmt.Println(datetime, *shard.ShardId, *r.SequenceNumber, message)
 		} else {
@@ -153,4 +154,28 @@ func (c *Consumer) getRecordsBy(iterator *string, shard *kinesis.Shard) (*string
 		}
 	}
 	return records.NextShardIterator, nil
+}
+
+func isAggregated(record *kinesis.Record) bool {
+	return bytes.HasPrefix(record.Data, magicNumber)
+}
+
+func deaggregate(record *kinesis.Record) (out *kinesis.Record) {
+	src := record.Data[len(magicNumber) : len(record.Data)-md5.Size]
+	dest := new(aggregated.AggregatedRecord)
+	err := proto.Unmarshal(src, dest)
+	if err != nil {
+		return
+	}
+	if len(dest.Records) == 0 {
+		return new(kinesis.Record)
+	}
+	deaggregated := dest.Records[0]
+	return &kinesis.Record{
+		ApproximateArrivalTimestamp: record.ApproximateArrivalTimestamp,
+		Data:                        deaggregated.GetData(),
+		EncryptionType:              record.EncryptionType,
+		PartitionKey:                record.PartitionKey,
+		SequenceNumber:              record.SequenceNumber,
+	}
 }
