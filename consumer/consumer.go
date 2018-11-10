@@ -167,10 +167,9 @@ func deaggregate(record *kinesis.Record) []*kinesis.Record {
 	}
 	records := make([]*kinesis.Record, len(dest.Records))
 	for i, r := range dest.Records {
-		deaggregated := dest.Records[0]
 		records[i] = &kinesis.Record{
 			ApproximateArrivalTimestamp: record.ApproximateArrivalTimestamp,
-			Data:                        deaggregated.GetData(),
+			Data:                        r.GetData(),
 			EncryptionType:              record.EncryptionType,
 			PartitionKey:                &dest.PartitionKeyTable[r.GetPartitionKeyIndex()],
 			SequenceNumber:              record.SequenceNumber,
