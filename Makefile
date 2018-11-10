@@ -1,7 +1,7 @@
 all: build
 
 build:
-	protoc --go_out=. proto/*.proto
+	protoc --go_out=. aggregated/*.proto
 	go build
 
 install:
