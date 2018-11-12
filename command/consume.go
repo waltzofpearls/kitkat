@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/spf13/cobra"
 	"github.com/waltzofpearls/kitkat/consumer"
 )
@@ -32,6 +35,11 @@ func consume(c *consumer.Consumer) runFunc {
 			os.Exit(1)
 		}
 		c.Verbose = verbose
+		c.Client = kinesis.New(
+			session.New(&aws.Config{
+				Region: aws.String(c.Region),
+			}),
+		)
 		if err := c.Read(); err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
 			os.Exit(1)

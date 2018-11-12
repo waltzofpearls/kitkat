@@ -1,2 +1,5 @@
 kitkat
 *.swp
+c.out
+c.out.tmp
+coverage.out

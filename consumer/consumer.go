@@ -5,11 +5,12 @@ import (
 	"crypto/md5"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
 	"github.com/golang/protobuf/proto"
 	"github.com/olekukonko/tablewriter"
 	"github.com/waltzofpearls/kitkat/aggregated"
@@ -26,7 +27,7 @@ type Consumer struct {
 	Since    string
 	Verbose  bool
 
-	client *kinesis.Kinesis
+	Client kinesisiface.KinesisAPI
 }
 
 func New() *Consumer {
@@ -34,28 +35,17 @@ func New() *Consumer {
 }
 
 func (c *Consumer) Read() error {
-	c.client = kinesis.New(
-		session.New(&aws.Config{
-			Region: aws.String(c.Region),
-		}),
-	)
 	atTimestamp, err := c.timestamp()
 	if err != nil {
 		return fmt.Errorf("--since needs to be in RFC3339 format. %s", err)
 	}
 
-	stream, err := c.client.DescribeStream(&kinesis.DescribeStreamInput{
-		StreamName: aws.String(c.Stream),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to describe stream. %s", err)
-	}
-	c.printStreamInfo(stream)
-
 	errChan := make(chan error)
-	for _, shard := range stream.StreamDescription.Shards {
-		go c.read(shard, atTimestamp, errChan)
+
+	for _, stream := range strings.Split(c.Stream, ",") {
+		c.readOneStream(stream, atTimestamp, errChan)
 	}
+
 	select {
 	case err := <-errChan:
 		return err
@@ -71,6 +61,20 @@ func (c *Consumer) timestamp() (time.Time, error) {
 		timestamp, err = time.Parse(time.RFC3339, c.Since)
 	}
 	return timestamp, err
+}
+
+func (c *Consumer) readOneStream(stream string, atTimestamp time.Time, errChan chan<- error) {
+	kinesisStream, err := c.Client.DescribeStream(&kinesis.DescribeStreamInput{
+		StreamName: aws.String(stream),
+	})
+	if err != nil {
+		errChan <- fmt.Errorf("failed to describe stream. %s", err)
+		return
+	}
+	c.printStreamInfo(kinesisStream)
+	for _, shard := range kinesisStream.StreamDescription.Shards {
+		go c.readOneShard(stream, shard, atTimestamp, errChan)
+	}
 }
 
 func (c *Consumer) printStreamInfo(stream *kinesis.DescribeStreamOutput) {
@@ -105,15 +109,20 @@ func (c *Consumer) closed(shard *kinesis.Shard) bool {
 	return shard.SequenceNumberRange.EndingSequenceNumber != nil
 }
 
-func (c *Consumer) read(shard *kinesis.Shard, atTimestamp time.Time, errChan chan<- error) {
+func (c *Consumer) readOneShard(
+	stream string,
+	shard *kinesis.Shard,
+	atTimestamp time.Time,
+	errChan chan<- error,
+) {
 	if c.closed(shard) {
 		return
 	}
 
-	iteratorOutput, err := c.client.GetShardIterator(&kinesis.GetShardIteratorInput{
+	iteratorOutput, err := c.Client.GetShardIterator(&kinesis.GetShardIteratorInput{
 		ShardId:           shard.ShardId,
 		ShardIteratorType: aws.String(c.Iterator),
-		StreamName:        aws.String(c.Stream),
+		StreamName:        aws.String(stream),
 		Timestamp:         aws.Time(atTimestamp),
 	})
 	if err != nil {
@@ -122,19 +131,19 @@ func (c *Consumer) read(shard *kinesis.Shard, atTimestamp time.Time, errChan cha
 	}
 	iterator := iteratorOutput.ShardIterator
 	for {
-		iterator, err = c.getRecordsBy(iterator, shard)
+		iterator, err = c.getRecordsBy(iterator, stream, shard)
 		if err != nil {
 			errChan <- fmt.Errorf(
 				"failed to get records from stream %s and shard %s. %s",
-				c.Stream, shard.ShardId, err)
+				stream, *shard.ShardId, err)
 			return
 		}
 		time.Sleep(time.Duration(c.Interval) * time.Millisecond)
 	}
 }
 
-func (c *Consumer) getRecordsBy(iterator *string, shard *kinesis.Shard) (*string, error) {
-	records, err := c.client.GetRecords(&kinesis.GetRecordsInput{
+func (c *Consumer) getRecordsBy(iterator *string, stream string, shard *kinesis.Shard) (*string, error) {
+	records, err := c.Client.GetRecords(&kinesis.GetRecordsInput{
 		ShardIterator: iterator,
 		Limit:         &c.Limit,
 	})
@@ -145,10 +154,10 @@ func (c *Consumer) getRecordsBy(iterator *string, shard *kinesis.Shard) (*string
 		if isAggregated(record) {
 			deaggregated := deaggregate(record)
 			for _, r := range deaggregated {
-				printRecord(shard, r, c.Verbose)
+				printRecord(stream, shard, r, c.Verbose)
 			}
 		} else {
-			printRecord(shard, record, c.Verbose)
+			printRecord(stream, shard, record, c.Verbose)
 		}
 	}
 	return records.NextShardIterator, nil
@@ -178,11 +187,11 @@ func deaggregate(record *kinesis.Record) []*kinesis.Record {
 	return records
 }
 
-func printRecord(shard *kinesis.Shard, record *kinesis.Record, verbose bool) {
+func printRecord(stream string, shard *kinesis.Shard, record *kinesis.Record, verbose bool) {
 	datetime := record.ApproximateArrivalTimestamp.Format("2006-01-02 15:04:05")
 	message := string(bytes.TrimSuffix(record.Data, []byte("\n")))
 	if verbose {
-		fmt.Println(datetime, *shard.ShardId, *record.SequenceNumber, message)
+		fmt.Println(datetime, stream, *shard.ShardId, *record.SequenceNumber, message)
 	} else {
 		fmt.Println(datetime, message)
 	}
