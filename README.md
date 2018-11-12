@@ -1,5 +1,8 @@
 # kitkat
 
+[![Build Status](https://travis-ci.org/waltzofpearls/kitkat.svg?branch=master)](https://travis-ci.org/waltzofpearls/kitkat)
+[![Go Report Card](https://goreportcard.com/badge/github.com/waltzofpearls/kitkat)](https://goreportcard.com/report/github.com/waltzofpearls/kitkat)
+
 <img align="left" alt="kitkat-logo" src="https://user-images.githubusercontent.com/965430/48188837-84ef3680-e2f3-11e8-9ccb-006d317be756.png">
 
 Kitkat is a command line Kinesis Streams producer and consumer.

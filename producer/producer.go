@@ -5,11 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"os"
+	"io"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
 )
 
 type Producer struct {
@@ -19,7 +19,8 @@ type Producer struct {
 	Verbose      bool
 	PartitionKey string
 
-	client *kinesis.Kinesis
+	Client kinesisiface.KinesisAPI
+	Source io.Reader
 }
 
 func New() *Producer {
@@ -27,12 +28,7 @@ func New() *Producer {
 }
 
 func (p *Producer) Write() error {
-	p.client = kinesis.New(
-		session.New(&aws.Config{
-			Region: aws.String(p.Region),
-		}),
-	)
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(p.Source)
 	for scanner.Scan() {
 		p.write(scanner.Text())
 	}
@@ -40,7 +36,7 @@ func (p *Producer) Write() error {
 }
 
 func (p *Producer) write(message string) {
-	out, err := p.client.PutRecord(&kinesis.PutRecordInput{
+	out, err := p.Client.PutRecord(&kinesis.PutRecordInput{
 		Data:         []byte(message),
 		StreamName:   aws.String(p.Stream),
 		PartitionKey: aws.String(p.partitionKey()),

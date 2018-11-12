@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/spf13/cobra"
 	"github.com/waltzofpearls/kitkat/producer"
 )
@@ -30,6 +33,12 @@ func produce(p *producer.Producer) runFunc {
 			os.Exit(1)
 		}
 		p.Verbose = verbose
+		p.Client = kinesis.New(
+			session.New(&aws.Config{
+				Region: aws.String(p.Region),
+			}),
+		)
+		p.Source = os.Stdin
 		if err := p.Write(); err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
 			os.Exit(1)
