@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -172,7 +171,6 @@ var deaggregate = func(record *kinesis.Record) []*kinesis.Record {
 	src := record.Data[len(magicNumber) : len(record.Data)-md5.Size]
 	dest := new(aggregated.AggregatedRecord)
 	err := proto.Unmarshal(src, dest)
-	log.Println(err)
 	if err != nil {
 		return []*kinesis.Record{}
 	}
