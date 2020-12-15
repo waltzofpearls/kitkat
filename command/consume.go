@@ -26,6 +26,7 @@ func init() {
 	cmd.Flags().Int64VarP(&c.Limit, "limit", "l", 500, "Limit records length of each GetRecords request")
 	cmd.Flags().Int64VarP(&c.Interval, "interval", "i", 100, "Interval in milliseconds between each GetRecords request")
 	cmd.Flags().StringVarP(&c.Since, "since", "t", "", "Show records since timestamp (e.g. 2016-04-20T12:00:00+09:00) when iterator type is AT_TIMESTAMP")
+	cmd.Flags().StringVarP(&c.Compress, "compress", "c", "none", "Compression method used in data records")
 }
 
 func consume(c *consumer.Consumer) runFunc {

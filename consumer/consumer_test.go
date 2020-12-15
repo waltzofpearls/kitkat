@@ -283,7 +283,7 @@ func TestPrintRecords(t *testing.T) {
 		}()
 		isAggregated = test.mockIsAggregated
 		deaggregate = test.mockDeaggregate
-		printOneRecord = func(out io.Writer, stream string, shard *kinesis.Shard, record *kinesis.Record, verbose bool) {
+		printOneRecord = func(out io.Writer, stream string, shard *kinesis.Shard, record *kinesis.Record, compress string, verbose bool) {
 			fmt.Fprintln(out, string(record.Data))
 		}
 		_, err := c.printRecords(&fakeIterator, "fake-stream", new(kinesis.Shard))
@@ -388,6 +388,7 @@ func TestPrintOneRecord(t *testing.T) {
 		shard    *kinesis.Shard
 		record   *kinesis.Record
 		expected string
+		compress string
 	}{
 		{
 			name:    "non verbose mode",
@@ -427,7 +428,7 @@ func TestPrintOneRecord(t *testing.T) {
 
 	for _, test := range cases {
 		var buf bytes.Buffer
-		printOneRecord(&buf, test.stream, test.shard, test.record, test.verbose)
+		printOneRecord(&buf, test.stream, test.shard, test.record, test.compress, test.verbose)
 		actual := buf.String()
 		assert.Equal(t, test.expected, actual, "test [%s] failed", test.name)
 	}

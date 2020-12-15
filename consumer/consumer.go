@@ -2,9 +2,11 @@ package consumer
 
 import (
 	"bytes"
+	"compress/zlib"
 	"crypto/md5"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -26,6 +28,7 @@ type Consumer struct {
 	Limit    int64
 	Interval int64
 	Since    string
+	Compress string
 	Verbose  bool
 
 	Client kinesisiface.KinesisAPI
@@ -154,10 +157,10 @@ func (c *Consumer) printRecords(iterator *string, stream string, shard *kinesis.
 		if isAggregated(record) {
 			deaggregated := deaggregate(record)
 			for _, r := range deaggregated {
-				printOneRecord(c.out, stream, shard, r, c.Verbose)
+				printOneRecord(c.out, stream, shard, r, c.Compress, c.Verbose)
 			}
 		} else {
-			printOneRecord(c.out, stream, shard, record, c.Verbose)
+			printOneRecord(c.out, stream, shard, record, c.Compress, c.Verbose)
 		}
 	}
 	return records.NextShardIterator, nil
@@ -189,12 +192,33 @@ var deaggregate = func(record *kinesis.Record) []*kinesis.Record {
 
 const recordDatetimeFormat = "2006-01-02 15:04:05"
 
-var printOneRecord = func(out io.Writer, stream string, shard *kinesis.Shard, record *kinesis.Record, verbose bool) {
+var printOneRecord = func(out io.Writer, stream string, shard *kinesis.Shard, record *kinesis.Record, compress string, verbose bool) {
+	var data []byte
+	if compress == "zlib" {
+		data = decompressZlib(record.Data)
+	} else {
+		data = record.Data
+	}
 	datetime := record.ApproximateArrivalTimestamp.Format(recordDatetimeFormat)
-	message := string(bytes.TrimSuffix(record.Data, []byte("\n")))
+	message := string(bytes.TrimSuffix(data, []byte("\n")))
 	if verbose {
 		fmt.Fprintln(out, datetime, stream, *shard.ShardId, *record.SequenceNumber, message)
 	} else {
 		fmt.Fprintln(out, datetime, message)
 	}
+}
+
+var decompressZlib = func(data []byte) []byte {
+	b := bytes.NewReader(data)
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return data
+	}
+	defer z.Close()
+
+	out, err := ioutil.ReadAll(z)
+	if err != nil {
+		return data
+	}
+	return out
 }
