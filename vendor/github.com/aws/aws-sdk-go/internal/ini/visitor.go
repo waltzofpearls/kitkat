@@ -50,7 +50,10 @@ func (v *DefaultVisitor) VisitExpr(expr AST) error {
 
 			rhs := children[1]
 
-			if rhs.Root.Type() != TokenLit {
+			// The right-hand value side the equality expression is allowed to contain '[', ']', ':', '=' in the values.
+			// If the token is not either a literal or one of the token types that identifies those four additional
+			// tokens then error.
+			if !(rhs.Root.Type() == TokenLit || rhs.Root.Type() == TokenOp || rhs.Root.Type() == TokenSep) {
 				return NewParseError("unexpected token type")
 			}
 
@@ -139,6 +142,11 @@ func (t Section) Has(k string) bool {
 func (t Section) ValueType(k string) (ValueType, bool) {
 	v, ok := t.values[k]
 	return v.Type, ok
+}
+
+// Bool returns a bool value at k
+func (t Section) Bool(k string) bool {
+	return t.values[k].BoolValue()
 }
 
 // Int returns an integer value at k
