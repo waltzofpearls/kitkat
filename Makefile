@@ -3,7 +3,7 @@ PKG = $$(go list ./... | grep -v -e '/aggregated')
 all: build
 
 build:
-	protoc --go_out=. aggregated/*.proto
+	protoc --go_out=./aggregated aggregated/*.proto
 	go build
 
 install:

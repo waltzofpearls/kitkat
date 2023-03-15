@@ -14,9 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
-	"github.com/golang/protobuf/proto"
 	"github.com/olekukonko/tablewriter"
 	"github.com/waltzofpearls/kitkat/aggregated"
+	"google.golang.org/protobuf/proto"
 )
 
 var magicNumber = []byte{0xF3, 0x89, 0x9A, 0xC2}
@@ -24,6 +24,7 @@ var magicNumber = []byte{0xF3, 0x89, 0x9A, 0xC2}
 type Consumer struct {
 	Stream   string
 	Region   string
+	Profile  string
 	Iterator string
 	Limit    int64
 	Interval int64

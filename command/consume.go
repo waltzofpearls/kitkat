@@ -22,6 +22,7 @@ func init() {
 	rootCmd.AddCommand(cmd)
 	cmd.Flags().StringVarP(&c.Stream, "stream", "s", "", "Kinesis stream name")
 	cmd.Flags().StringVarP(&c.Region, "region", "r", "us-west-2", "AWS region")
+	cmd.Flags().StringVarP(&c.Profile, "profile", "p", "", "AWS profile")
 	cmd.Flags().StringVarP(&c.Iterator, "iterator", "I", "LATEST", "Iterator type: LATEST, TRIM_HORIZON, AT_SEQUENCE_NUMBER or AT_TIMESTAMP")
 	cmd.Flags().Int64VarP(&c.Limit, "limit", "l", 500, "Limit records length of each GetRecords request")
 	cmd.Flags().Int64VarP(&c.Interval, "interval", "i", 100, "Interval in milliseconds between each GetRecords request")
@@ -36,10 +37,19 @@ func consume(c *consumer.Consumer) runFunc {
 			os.Exit(1)
 		}
 		c.Verbose = verbose
-		c.Client = kinesis.New(
-			session.New(&aws.Config{
+		sess, err := session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+			Config: aws.Config{
 				Region: aws.String(c.Region),
-			}),
+			},
+			Profile: c.Profile,
+		})
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "ERROR: ", err)
+			os.Exit(1)
+		}
+		c.Client = kinesis.New(
+			sess,
 		)
 		if err := c.Read(); err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
