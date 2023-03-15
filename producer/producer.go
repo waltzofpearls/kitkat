@@ -15,6 +15,7 @@ import (
 type Producer struct {
 	Stream       string
 	Region       string
+	Profile      string
 	Aggregated   bool
 	Verbose      bool
 	PartitionKey string

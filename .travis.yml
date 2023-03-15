@@ -2,19 +2,16 @@ language: go
 sudo: false
 
 go:
-  - 1.10.x
-  - 1.11.x
+  - 1.20.x
 
 install:
-  - go get -d -u github.com/golang/protobuf/protoc-gen-go
-  - git -C "$(go env GOPATH)"/src/github.com/golang/protobuf checkout $PB_GIT_TAG
-  - go install github.com/golang/protobuf/protoc-gen-go
-  - curl -L https://github.com/google/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip -o /tmp/protoc.zip
+  - go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.29.1
+  - curl -L https://github.com/protocolbuffers/protobuf/releases/download/v22.2/protoc-22.2-linux-x86_64.zip -o /tmp/protoc.zip
   - unzip /tmp/protoc.zip -d "$HOME"/protoc
   - mkdir -p "$HOME"/src && ln -s "$HOME"/protoc "$HOME"/src/protobuf
 
 env:
-  - PATH=$HOME/protoc/bin:$PATH PB_GIT_TAG=v1.2.0
+  - PATH=$HOME/protoc/bin:$PATH
 
 script:
   - make

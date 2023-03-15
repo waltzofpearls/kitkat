@@ -11,10 +11,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
-	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/waltzofpearls/kitkat/aggregated"
+	"google.golang.org/protobuf/proto"
 )
 
 type mockKinesis struct {

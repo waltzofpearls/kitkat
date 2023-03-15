@@ -4,10 +4,10 @@ go 1.20
 
 require (
 	github.com/aws/aws-sdk-go v1.44.221
-	github.com/golang/protobuf v1.2.0
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/spf13/cobra v0.0.3
 	github.com/stretchr/testify v1.2.2
+	google.golang.org/protobuf v1.29.1
 )
 
 require (

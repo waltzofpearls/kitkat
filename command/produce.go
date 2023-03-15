@@ -22,6 +22,7 @@ func init() {
 	rootCmd.AddCommand(cmd)
 	cmd.Flags().StringVarP(&p.Stream, "stream", "s", "", "Kinesis stream name")
 	cmd.Flags().StringVarP(&p.Region, "region", "r", "us-west-2", "AWS region")
+	cmd.Flags().StringVarP(&p.Profile, "profile", "p", "", "AWS profile")
 	cmd.Flags().StringVarP(&p.PartitionKey, "key", "k", "", "Partition key or random key if left empty")
 	cmd.Flags().BoolVarP(&p.Aggregated, "aggregated", "a", false, "Produce in KPL aggregated record format")
 }
@@ -33,10 +34,19 @@ func produce(p *producer.Producer) runFunc {
 			os.Exit(1)
 		}
 		p.Verbose = verbose
-		p.Client = kinesis.New(
-			session.New(&aws.Config{
+		sess, err := session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+			Config: aws.Config{
 				Region: aws.String(p.Region),
-			}),
+			},
+			Profile: p.Profile,
+		})
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "ERROR: ", err)
+			os.Exit(1)
+		}
+		p.Client = kinesis.New(
+			sess,
 		)
 		p.Source = os.Stdin
 		if err := p.Write(); err != nil {

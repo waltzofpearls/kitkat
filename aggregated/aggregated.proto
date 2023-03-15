@@ -1,6 +1,8 @@
 syntax = "proto2";
 package aggregated;
 
+option go_package = "../aggregated";
+
 message AggregatedRecord {
   repeated string partition_key_table     = 1;
   repeated string explicit_hash_key_table = 2;
